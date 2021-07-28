@@ -40,6 +40,7 @@ class Image extends Text
         $content = '';
         $imageData = $this->element->getImageStringData(true);
         if ($imageData !== null) {
+            var_dump($this->element->getStyle());
             $styleWriter = new ImageStyleWriter($this->element->getStyle());
             $style = $styleWriter->write();
             $imageData = 'data:' . $this->element->getImageType() . ';base64,' . $imageData;

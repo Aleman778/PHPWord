@@ -21,6 +21,7 @@ use PhpOffice\PhpWord\ComplexType\TblWidth as TblWidthComplexType;
 use PhpOffice\PhpWord\Element\AbstractContainer;
 use PhpOffice\PhpWord\Element\TextRun;
 use PhpOffice\PhpWord\Element\TrackChange;
+use PhpOffice\PhpWord\Style\Table;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\Shared\XMLReader;
 
@@ -276,8 +277,31 @@ abstract class AbstractPart
             }
             $target = $this->getMediaTarget($docPart, $embedId);
             if (!is_null($target)) {
+                $styleDef = array();
+
+                // Shape properties
+                $shapePropsNote = $xmlReader->getElement('wp:inline/a:graphic/a:graphicData/pic:pic/pic:spPr', $node);
+                if ($shapePropsNote !== null) {
+                    // TODO: this should probably be moved into its own function
+                    // Shape transformations
+                    $width = (float) $xmlReader->getAttribute('cx', $shapePropsNote, 'a:xfrm/a:ext');
+                    $height = (float) $xmlReader->getAttribute('cy', $shapePropsNote, 'a:xfrm/a:ext');
+
+                    // NOTE: Specified in EMU, 1/914400 of an inch (1 inch is 96 pixels)
+                    $width  /= 914400 / 96;
+                    $height /= 914400 / 96;
+
+                    $styleDef['width'] = $width;
+                    $styleDef['width'] = $height;
+                    $styleDef['unit'] = 'px';
+                    // $style->setWidth($width);
+                    // $style->setHeight($height);
+                    // $style->setUnit('px');
+                    // var_dump($style);
+                }
+
                 $imageSource = "zip://{$this->docFile}#{$target}";
-                $parent->addImage($imageSource, null, false, $name);
+                $imageElement = $parent->addImage($imageSource, $styleDef, false, $name);
             }
         } elseif ($node->nodeName == 'w:object') {
             // Object
@@ -475,7 +499,6 @@ abstract class AbstractPart
      * @param \PhpOffice\PhpWord\Shared\XMLReader $xmlReader
      * @param \DOMElement $domNode
      * @return string|array|null
-     * @todo Capture w:tblStylePr w:type="firstRow"
      */
     protected function readTableStyle(XMLReader $xmlReader, \DOMElement $domNode)
     {
@@ -487,31 +510,60 @@ abstract class AbstractPart
             if ($xmlReader->elementExists('w:tblPr/w:tblStyle', $domNode)) {
                 $style = $xmlReader->getAttribute('w:val', $domNode, 'w:tblPr/w:tblStyle');
             } else {
-                $styleNode = $xmlReader->getElement('w:tblPr', $domNode);
+                // Both tbl and tc has has the same kind of styling, tbl styles the entire table,
+                // while tc only styles the cells.
+                if ($xmlReader->elementExists('w:tcPr', $domNode)) {
+                  $tname = 'tc';
+                } else {
+                  $tname = 'tbl';  
+                }
+                
+                $styleNode = $xmlReader->getElement("w:{$tname}Pr", $domNode);
                 $styleDefs = array();
                 foreach ($margins as $side) {
                     $ucfSide = ucfirst($side);
-                    $styleDefs["cellMargin$ucfSide"] = array(self::READ_VALUE, "w:tblCellMar/w:$side", 'w:w');
+                    $styleDefs["cellMargin$ucfSide"] = array(self::READ_VALUE, "w:{$tname}CellMar/w:$side", 'w:w');
                 }
                 foreach ($borders as $side) {
                     $ucfSide = ucfirst($side);
-                    $styleDefs["border{$ucfSide}Size"] = array(self::READ_VALUE, "w:tblBorders/w:$side", 'w:sz');
-                    $styleDefs["border{$ucfSide}Color"] = array(self::READ_VALUE, "w:tblBorders/w:$side", 'w:color');
-                    $styleDefs["border{$ucfSide}Style"] = array(self::READ_VALUE, "w:tblBorders/w:$side", 'w:val');
+                    $styleDefs["border{$ucfSide}Size"] = array(self::READ_VALUE, "w:{$tname}Borders/w:$side", 'w:sz');
+                    $styleDefs["border{$ucfSide}Color"] = array(self::READ_VALUE, "w:{$tname}Borders/w:$side", 'w:color');
+                    $styleDefs["border{$ucfSide}Style"] = array(self::READ_VALUE, "w:{$tname}Borders/w:$side", 'w:val');
                 }
-                $styleDefs['layout'] = array(self::READ_VALUE, 'w:tblLayout', 'w:type');
+                $styleDefs['layout'] = array(self::READ_VALUE, "w:{$tname}Layout", 'w:type');
                 $styleDefs['bidiVisual'] = array(self::READ_TRUE, 'w:bidiVisual');
-                $styleDefs['cellSpacing'] = array(self::READ_VALUE, 'w:tblCellSpacing', 'w:w');
+                $styleDefs['cellSpacing'] = array(self::READ_VALUE, "w:{$tname}CellSpacing", 'w:w');
                 $style = $this->readStyleDefs($xmlReader, $styleNode, $styleDefs);
-
-                $tablePositionNode = $xmlReader->getElement('w:tblpPr', $styleNode);
+                
+                $tablePositionNode = $xmlReader->getElement("w:{$tname}pPr", $styleNode);
                 if ($tablePositionNode !== null) {
                     $style['position'] = $this->readTablePosition($xmlReader, $tablePositionNode);
                 }
-
-                $indentNode = $xmlReader->getElement('w:tblInd', $styleNode);
+                
+                $indentNode = $xmlReader->getElement("w:{$tname}Ind", $styleNode);
                 if ($indentNode !== null) {
                     $style['indent'] = $this->readTableIndent($xmlReader, $indentNode);
+                }
+
+                $shadingNode = $xmlReader->getElement("w:shd", $styleNode);
+                if ($shadingNode !== null) {
+                    $styleDefs = array(
+                      'pattern' => array(self::READ_VALUE, '.', 'w:val'),
+                      'color'  => array(self::READ_VALUE, '.', 'w:color'),
+                      'fill'  => array(self::READ_VALUE, '.', 'w:fill'),
+                    );
+                    $style['shading'] = $this->readStyleDefs($xmlReader, $shadingNode, $styleDefs);
+                }
+                
+                // Conditional style nodes
+                if ($tname === 'tbl') {
+                    $condStyleNodes = $xmlReader->getElements('w:tblStylePr', $domNode);
+                    $style['conditionalStyles'] = array();
+                    foreach ($condStyleNodes as $node) {
+                        $condType = $node->getAttribute("w:type");
+                        $condStyle = $this->readTableStyle($xmlReader, $node);
+                        $style['conditionalStyles'][$condType] = new Table($condStyle, null);
+                    }
                 }
             }
         }

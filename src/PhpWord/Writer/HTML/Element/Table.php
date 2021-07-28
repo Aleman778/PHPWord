@@ -17,6 +17,8 @@
 
 namespace PhpOffice\PhpWord\Writer\HTML\Element;
 
+use PhpOffice\PhpWord\Style\Shading;
+
 /**
  * Table element HTML writer
  *
@@ -32,7 +34,7 @@ class Table extends AbstractElement
     public function write()
     {
         if (!$this->element instanceof \PhpOffice\PhpWord\Element\Table) {
-            return '';
+          return '';
         }
 
         $content = '';
@@ -42,14 +44,27 @@ class Table extends AbstractElement
             $content .= '<table' . self::getTableStyle($this->element->getStyle()) . '>' . PHP_EOL;
 
             for ($i = 0; $i < $rowCount; $i++) {
+                $rowName = 'row';
+                if ($i == 0) {
+                    $rowName = 'firstRow';
+                } else if ($i == $rowCount - 1) {
+                    $rowName = 'lastRow';
+                }
+              
                 /** @var $row \PhpOffice\PhpWord\Element\Row Type hint */
                 $rowStyle = $rows[$i]->getStyle();
                 // $height = $row->getHeight();
                 $tblHeader = $rowStyle->isTblHeader();
-                $content .= '<tr>' . PHP_EOL;
+                $content .= "<tr class=\"{$rowName}\">" . PHP_EOL;
                 $rowCells = $rows[$i]->getCells();
                 $rowCellCount = count($rowCells);
                 for ($j = 0; $j < $rowCellCount; $j++) {
+                    $colName = 'col';
+                    if ($j == 0) {
+                        $colName = 'firstCol';
+                    } else if ($j == $rowCellCount - 1) {
+                        $colName = 'lastCol';
+                    }
                     $cellStyle = $rowCells[$j]->getStyle();
                     $cellStyleCss = self::getTableStyle($cellStyle);
                     $cellBgColor = $cellStyle->getBgColor();
@@ -82,7 +97,7 @@ class Table extends AbstractElement
                         $cellRowSpanAttr = ($cellRowSpan > 1 ? " rowspan=\"{$cellRowSpan}\"" : '');
                         $cellBgColorAttr = (is_null($cellBgColor) ? '' : " bgcolor=\"#{$cellBgColor}\"");
                         $cellFgColorAttr = (is_null($cellFgColor) ? '' : " color=\"#{$cellFgColor}\"");
-                        $content .= "<{$cellTag}{$cellStyleCss}{$cellColSpanAttr}{$cellRowSpanAttr}{$cellBgColorAttr}{$cellFgColorAttr}>" . PHP_EOL;
+                        $content .= "<{$cellTag} class=\"{$colName}\" {$cellStyleCss}{$cellColSpanAttr}{$cellRowSpanAttr}{$cellBgColorAttr}{$cellFgColorAttr}>" . PHP_EOL;
                         $writer = new Container($this->parentWriter, $rowCells[$j]);
                         $content .= $writer->write();
                         if ($cellRowSpan > 1) {
@@ -153,30 +168,57 @@ class Table extends AbstractElement
         $dirs = array('Top', 'Left', 'Bottom', 'Right');
         $testmethprefix = 'getBorder';
         foreach ($dirs as $dir) {
-            $testmeth = $testmethprefix . $dir . 'Style';
-            if (method_exists($tableStyle, $testmeth)) {
-                $outval = $tableStyle->{$testmeth}();
-                if (is_string($outval) && 1 == preg_match('/^[a-z]+$/', $outval)) {
-                    $style .= ' border-' . lcfirst($dir) . '-style: ' . $outval . ';';
-                }
-            }
-            $testmeth = $testmethprefix . $dir . 'Color';
-            if (method_exists($tableStyle, $testmeth)) {
-                $outval = $tableStyle->{$testmeth}();
-                if (is_string($outval) && 1 == preg_match('/^[a-z]+$/', $outval)) {
-                    $style .= ' border-' . lcfirst($dir) . '-color: ' . $outval . ';';
-                }
-            }
-            $testmeth = $testmethprefix . $dir . 'Size';
-            if (method_exists($tableStyle, $testmeth)) {
-                $outval = $tableStyle->{$testmeth}();
-                if (is_numeric($outval)) {
-                    // size is in twips - divide by 20 to get points
-                    $style .= ' border-' . lcfirst($dir) . '-width: ' . ((string) ($outval / 20)) . 'pt;';
+            $style .= self::getTableBorderStyleString($tableStyle, $testmethprefix . $dir, $dir);
+        }
+
+        $shading = $tableStyle->getShading();
+        if ($shading !== null) {
+          switch ($shading->getPattern()) {
+          case Shading::PATTERN_CLEAR:
+              $style .= ' background-color: #' . $shading->getFill() . ';';
+              break;
+          case Shading::PATTERN_SOLID:
+              $style .= ' background-color: #' . $shading->getColor() . ';';
+              break;
+          }
+        }
+
+        return $style;
+    }
+
+    public static function getTableBorderStyleString($tableStyle, $testmethprefix, $dir) {
+        $style = '';
+        $testmeth = $testmethprefix . 'Style';
+        if (method_exists($tableStyle, $testmeth)) {
+            $outval = $tableStyle->{$testmeth}();
+            if (is_string($outval) && 1 == preg_match('/^[a-z]+$/', $outval)) {
+                if ($outval == 'single') $outval = 'solid';
+                if ($outval != 'nil') {
+                  $style .= ' border-' . lcfirst($dir) . '-style: ' . $outval . ';';
                 }
             }
         }
-
+        $testmeth = $testmethprefix . 'Color';
+        if (method_exists($tableStyle, $testmeth)) {
+            $outval = $tableStyle->{$testmeth}();
+            if (is_string($outval)) {
+                if (1 == preg_match('/^[a-z]+$/', $outval)) {
+                    if ($outval == 'auto') $outval = '#000000';
+                    $style .= ' border-' . lcfirst($dir) . '-color: ' . $outval . ';';
+                } else if (is_string($outval) && 1 == preg_match('/^[0-9a-fA-F]+$/', $outval)) {
+                    $style .= ' border-' . lcfirst($dir) . '-color: #' . $outval . ';';
+                }
+            }
+        }
+        $testmeth = $testmethprefix . 'Size';
+        if (method_exists($tableStyle, $testmeth)) {
+            $outval = $tableStyle->{$testmeth}();
+            if (is_numeric($outval)) {
+                // size is in twips - divide by 20 to get points (NOTE: for some reason it's 1/8 pt on Word)
+                // echo $outval . '-> ' . ((string) ($outval / 8)) . 'pt<br>';
+                $style .= ' border-' . lcfirst($dir) . '-width: ' . ((string) ($outval / 8)) . 'pt;';
+            }
+        }
         return $style;
     }
 }

@@ -108,6 +108,13 @@ class Table extends Border
     private $borderInsideHColor;
 
     /**
+     * Border style inside horizontal
+     *
+     * @var string
+     */
+    private $borderInsideHStyle;
+
+    /**
      * Border size inside vertical
      *
      * @var int
@@ -121,6 +128,12 @@ class Table extends Border
      */
     private $borderInsideVColor;
 
+    /**
+     * Border style inside vertical
+     *
+     * @var string
+     */
+    private $borderInsideVStyle;
     /**
      * Shading
      *
@@ -177,6 +190,12 @@ class Table extends Border
      * @var bool
      */
     private $bidiVisual = false;
+
+    /**
+     * Conditional table styles e.g. firstRow.
+     * @var array
+     */
+    private $conditionalStyles = null;
 
     /**
      * Create new table style
@@ -365,6 +384,27 @@ class Table extends Border
     }
 
     /**
+     * Get border style inside horizontal
+     *
+     * @return string
+     */
+    public function getBorderInsideHStyle()
+    {
+        return $this->getTableOnlyProperty('borderInsideHStyle');
+    }
+
+    /**
+     * Set border style inside horizontal
+     *
+     * @param string $value
+     * @return self
+     */
+    public function setBorderInsideHStyle($value = null)
+    {
+        return $this->setTableOnlyProperty('borderInsideHStyle', $value, false);
+    }
+
+    /**
      * Get border size inside vertical
      *
      * @return int
@@ -404,6 +444,27 @@ class Table extends Border
     public function setBorderInsideVColor($value = null)
     {
         return $this->setTableOnlyProperty('borderInsideVColor', $value, false);
+    }
+
+    /**
+     * Get border style inside vertical
+     *
+     * @return string
+     */
+    public function getBorderInsideVStyle()
+    {
+        return $this->getTableOnlyProperty('borderInsideVStyle');
+    }
+
+    /**
+     * Set border style inside vertical
+     *
+     * @param string $value
+     * @return self
+     */
+    public function setBorderInsideVStyle($value = null)
+    {
+        return $this->setTableOnlyProperty('borderInsideVStyle', $value, false);
     }
 
     /**
@@ -804,6 +865,18 @@ class Table extends Border
     public function setBidiVisual($bidi)
     {
         $this->bidiVisual = $bidi;
+
+        return $this;
+    }
+
+    public function getConditionalStyles()
+    {
+        return $this->conditionalStyles;
+    }
+
+    public function setConditionalStyles($conditionalStyles)
+    {
+        $this->conditionalStyles = $conditionalStyles;
 
         return $this;
     }

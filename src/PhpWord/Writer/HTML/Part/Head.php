@@ -109,12 +109,13 @@ class Head extends AbstractPart
                 'border-top' => '1px solid #CCC',
             ),
             'table' => array(
-                'border'         => '1px solid black',
+                'border'         => '0px solid black',
                 'border-spacing' => '0px',
                 'width '         => '100%',
             ),
             'td' => array(
-                'border' => '1px solid black',
+                'padding-left' => '6px',
+                'padding-right' => '6px',
             ),
         );
         foreach ($defaultStyles as $selector => $style) {
@@ -122,6 +123,7 @@ class Head extends AbstractPart
             $css .= $selector . ' {' . $styleWriter->write() . '}' . PHP_EOL;
         }
 
+        
         // Custom styles
         $customStyles = Style::getStyles();
         if (is_array($customStyles)) {
@@ -138,6 +140,7 @@ class Head extends AbstractPart
                     }
                     $css .= "{$name} {" . $styleWriter->write() . '}' . PHP_EOL;
                 }
+
                 if ($style instanceof Paragraph) {
                     $styleWriter = new ParagraphStyleWriter($style);
                     if (!$stylep) {
@@ -148,11 +151,40 @@ class Head extends AbstractPart
                     }
                     $css .= "{$name} {" . $styleWriter->write() . '}' . PHP_EOL;
                 }
+
                 if ($style instanceof Table) {
                     $css .= ".{$name} {" . TableStyleWriter::getTableStyleString($style) . '}' . PHP_EOL;
+
+                    // TODO: this is a ugly hack
+                    $insideBorderInsideHCss = TableStyleWriter::getTableBorderStyleString($style, 'getBorderInsideH', 'bottom');
+                    if ($insideBorderInsideHCss !== '') {
+                      $css .= ".{$name} > tbody > .firstRow > td {" . $insideBorderInsideHCss . '}' . PHP_EOL;
+                      $css .= ".{$name} > tbody > .row > td {" . $insideBorderInsideHCss . '}' . PHP_EOL;
+                    }
+                    $insideBorderInsideVCss = TableStyleWriter::getTableBorderStyleString($style, 'getBorderInsideV', 'right');
+                    if ($insideBorderInsideVCss !== '') {
+                      $css .= ".{$name} > tbody > tr > .firstCol {" . $insideBorderInsideVCss . '}' . PHP_EOL;
+                      $css .= ".{$name} > tbody > tr > .col {" . $insideBorderInsideVCss . '}' . PHP_EOL;
+                    }
+
+                    $condStyles = $style->getConditionalStyles();
+                    if ($condStyles !== null) {
+                        foreach ($condStyles as $condType => $condStyle) {
+                          if ($condType === 'firstRow' || $condType === 'lastRow') {
+                            $css .= ".{$name} > tbody > .{$condType} > td {" .
+                                 TableStyleWriter::getTableStyleString($condStyle) . '}' . PHP_EOL;
+                          } else if ($condType === 'firstCol' || $condType === 'lastCol') {
+                            $css .= ".{$name} > tbody > tr > .{$condType} {" .
+                                 TableStyleWriter::getTableStyleString($condStyle) . '}' . PHP_EOL;
+                          } else {
+                            
+                          }
+                        }
+                    }
                 }
             }
         }
+        
         $secno = 0;
         $sections = $this->getParentWriter()->getPhpWord()->getSections();
         $intotwip = \PhpOffice\PhpWord\Shared\Converter::INCH_TO_TWIP;
