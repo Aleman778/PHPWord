@@ -114,8 +114,8 @@ class Head extends AbstractPart
                 'width '         => '100%',
             ),
             'td' => array(
-                'padding-left' => '6px',
-                'padding-right' => '6px',
+                'padding-left' => '12px',
+                'padding-right' => '12px',
             ),
         );
         foreach ($defaultStyles as $selector => $style) {

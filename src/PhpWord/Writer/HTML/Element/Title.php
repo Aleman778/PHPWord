@@ -47,7 +47,12 @@ class Title extends AbstractElement
             $text = $writer->write();
         }
 
-        $content = "<{$tag}>{$text}</{$tag}>" . PHP_EOL;
+        $className = $this->element->getStyle();
+        if (is_string($className)) {
+            $style = ' class="' . $className . '"';
+        }
+
+        $content = "<{$tag}{$style}>{$text}</{$tag}>" . PHP_EOL;
 
         return $content;
     }
