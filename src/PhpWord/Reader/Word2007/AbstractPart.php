@@ -292,12 +292,8 @@ abstract class AbstractPart
                     $height /= 914400 / 96;
 
                     $styleDef['width'] = $width;
-                    $styleDef['width'] = $height;
+                    $styleDef['height'] = $height;
                     $styleDef['unit'] = 'px';
-                    // $style->setWidth($width);
-                    // $style->setHeight($height);
-                    // $style->setUnit('px');
-                    // var_dump($style);
                 }
 
                 $imageSource = "zip://{$this->docFile}#{$target}";
