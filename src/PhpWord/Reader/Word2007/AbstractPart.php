@@ -372,10 +372,22 @@ abstract class AbstractPart
 
         /** @var \PhpOffice\PhpWord\Element\Table $table Type hint */
         $table = $parent->addTable($tblStyle);
+        $columnWidth = array();
         $tblNodes = $xmlReader->getElements('*', $domNode);
         foreach ($tblNodes as $tblNode) {
             if ('w:tblGrid' == $tblNode->nodeName) { // Column
-                // @todo Do something with table columns
+                $columns = $xmlReader->getElements('w:gridCol', $tblNode);
+                $sumOfValues = 0;
+                foreach ($columns as $col) {
+                    $w = $xmlReader->getAttribute('w:w', $col);
+                    $columnWidth[] = $w;
+                    $sumOfValues += $w;
+                }
+
+                $columnWidth = array_map(function ($w) use ($sumOfValues) {
+                  return (int) (((float) $w / (float) $sumOfValues) * 5000);
+                }, $columnWidth);
+
             } elseif ('w:tr' == $tblNode->nodeName) { // Row
                 $rowHeight = $xmlReader->getAttribute('w:val', $tblNode, 'w:trPr/w:trHeight');
                 $rowHRule = $xmlReader->getAttribute('w:hRule', $tblNode, 'w:trPr/w:trHeight');
@@ -388,6 +400,7 @@ abstract class AbstractPart
 
                 $row = $table->addRow($rowHeight, $rowStyle);
                 $rowNodes = $xmlReader->getElements('*', $tblNode);
+                $cellIndex = 0;
                 foreach ($rowNodes as $rowNode) {
                     if ('w:trPr' == $rowNode->nodeName) { // Row style
                         // @todo Do something with row style
@@ -399,6 +412,13 @@ abstract class AbstractPart
                             $cellStyle = $this->readCellStyle($xmlReader, $cellStyleNode);
                         }
 
+                        if (count($columnWidth) > $cellIndex) {
+                            if ($cellStyle === null) {
+                                $cellStyle = array();
+                            }
+                            $cellStyle['width'] = $columnWidth[$cellIndex];
+                        }
+
                         $cell = $row->addCell($cellWidth, $cellStyle);
                         $cellNodes = $xmlReader->getElements('*', $rowNode);
                         foreach ($cellNodes as $cellNode) {
@@ -406,6 +426,7 @@ abstract class AbstractPart
                                 $this->readParagraph($xmlReader, $cellNode, $cell, $docPart);
                             }
                         }
+                        $cellIndex++;
                     }
                 }
             }
@@ -623,6 +644,8 @@ abstract class AbstractPart
      */
     private function readCellStyle(XMLReader $xmlReader, \DOMElement $domNode)
     {
+        $borders = array('top', 'left', 'bottom', 'right', 'insideH', 'insideV');
+
         $styleDefs = array(
             'valign'        => array(self::READ_VALUE, 'w:vAlign'),
             'textDirection' => array(self::READ_VALUE, 'w:textDirection'),
@@ -630,6 +653,13 @@ abstract class AbstractPart
             'vMerge'        => array(self::READ_VALUE, 'w:vMerge'),
             'bgColor'       => array(self::READ_VALUE, 'w:shd', 'w:fill'),
         );
+
+        foreach ($borders as $side) {
+            $ucfSide = ucfirst($side);
+            $styleDefs["border{$ucfSide}Size"] = array(self::READ_VALUE, "w:tcBorders/w:$side", 'w:sz');
+            $styleDefs["border{$ucfSide}Color"] = array(self::READ_VALUE, "w:tcBorders/w:$side", 'w:color');
+            $styleDefs["border{$ucfSide}Style"] = array(self::READ_VALUE, "w:tcBorders/w:$side", 'w:val');
+        }
 
         return $this->readStyleDefs($xmlReader, $domNode, $styleDefs);
     }

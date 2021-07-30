@@ -18,6 +18,7 @@
 namespace PhpOffice\PhpWord\Writer\HTML\Element;
 
 use PhpOffice\PhpWord\Style\Shading;
+use PhpOffice\PhpWord\SimpleType\VerticalJc;
 
 /**
  * Table element HTML writer
@@ -44,6 +45,11 @@ class Table extends AbstractElement
             $content .= '<table' . self::getTableStyle($this->element->getStyle()) . '>' . PHP_EOL;
 
             for ($i = 0; $i < $rowCount; $i++) {
+                // Put different table conditions on the cells
+                $rowOddOrEven = '';
+                if ($i > 0) {
+                    $rowOddOrEven = ($i % 2 == 0) ? 'band2Horz' : 'band1Horz';
+                }
                 $rowName = 'row';
                 if ($i == 0) {
                     $rowName = 'firstRow';
@@ -55,7 +61,7 @@ class Table extends AbstractElement
                 $rowStyle = $rows[$i]->getStyle();
                 // $height = $row->getHeight();
                 $tblHeader = $rowStyle->isTblHeader();
-                $content .= "<tr class=\"{$rowName}\">" . PHP_EOL;
+                $content .= "<tr class=\"{$rowName} {$rowOddOrEven}\">" . PHP_EOL;
                 $rowCells = $rows[$i]->getCells();
                 $rowCellCount = count($rowCells);
                 for ($j = 0; $j < $rowCellCount; $j++) {
@@ -165,6 +171,28 @@ class Table extends AbstractElement
             }
         }
 
+        if (method_exists($tableStyle, 'getWidth')) {
+            $width = $tableStyle->getWidth();
+            if ($width > 0) {
+                $width /= 50;
+                $style .= " width: {$width}%;";
+            }
+        }
+
+        if (method_exists($tableStyle, 'getVAlign')) {
+            switch ($tableStyle->getVAlign()) {
+            case VerticalJc::CENTER:
+                $style .= ' vertical-align: middle;';
+                break;
+            case VerticalJc::BOTTOM:
+                $style .= ' vertical-align: bottom;';
+                break;
+            default:
+                $style .= ' vertical-align: top;';
+                break;
+            }
+        }
+
         $dirs = array('Top', 'Left', 'Bottom', 'Right');
         $testmethprefix = 'getBorder';
         foreach ($dirs as $dir) {
@@ -192,10 +220,9 @@ class Table extends AbstractElement
         if (method_exists($tableStyle, $testmeth)) {
             $outval = $tableStyle->{$testmeth}();
             if (is_string($outval) && 1 == preg_match('/^[a-z]+$/', $outval)) {
-                if ($outval == 'single') $outval = 'solid';
-                if ($outval != 'nil') {
-                  $style .= ' border-' . lcfirst($dir) . '-style: ' . $outval . ';';
-                }
+                if      ($outval == 'single') $outval = 'solid';
+                else if ($outval == 'nil')    $outval = 'none';
+                $style .= ' border-' . lcfirst($dir) . '-style: ' . $outval . ';';
             }
         }
         $testmeth = $testmethprefix . 'Color';

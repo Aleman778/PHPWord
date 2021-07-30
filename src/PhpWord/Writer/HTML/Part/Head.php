@@ -170,15 +170,15 @@ class Head extends AbstractPart
                     $condStyles = $style->getConditionalStyles();
                     if ($condStyles !== null) {
                         foreach ($condStyles as $condType => $condStyle) {
-                          if ($condType === 'firstRow' || $condType === 'lastRow') {
-                            $css .= ".{$name} > tbody > .{$condType} > td {" .
-                                 TableStyleWriter::getTableStyleString($condStyle) . '}' . PHP_EOL;
-                          } else if ($condType === 'firstCol' || $condType === 'lastCol') {
-                            $css .= ".{$name} > tbody > tr > .{$condType} {" .
-                                 TableStyleWriter::getTableStyleString($condStyle) . '}' . PHP_EOL;
-                          } else {
-                            
-                          }
+                            if ($condType === 'firstRow' || $condType === 'lastRow' ||
+                                $condType === 'band1Horz' || $condType === 'band2Horz') {
+                              
+                                $css .= ".{$name} > tbody > .{$condType} > td {" .
+                                     TableStyleWriter::getTableStyleString($condStyle) . '}' . PHP_EOL;
+                            } else if ($condType === 'firstCol' || $condType === 'lastCol') {
+                                $css .= ".{$name} > tbody > tr > .{$condType} {" .
+                                     TableStyleWriter::getTableStyleString($condStyle) . '}' . PHP_EOL;
+                            }
                         }
                     }
                 }
