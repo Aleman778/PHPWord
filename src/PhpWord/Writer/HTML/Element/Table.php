@@ -72,7 +72,7 @@ class Table extends AbstractElement
                         $colName = 'lastCol';
                     }
                     $cellStyle = $rowCells[$j]->getStyle();
-                    $cellStyleCss = self::getTableStyle($cellStyle);
+                    $cellStyleCss = self::getTableStyle($cellStyle, $i == 0, $j == 0);
                     $cellBgColor = $cellStyle->getBgColor();
                     $cellBgColor === 'auto' && $cellBgColor = null; // auto cannot be parsed to hexadecimal number
                     $cellFgColor = null;
@@ -133,9 +133,11 @@ class Table extends AbstractElement
      * Translates Table style in CSS equivalent
      *
      * @param string|\PhpOffice\PhpWord\Style\Table|\PhpOffice\PhpWord\Style\Cell|null $tableStyle
+     * @param bool $useBorderTop
+     * @param bool $useBorderTop
      * @return string
      */
-    private static function getTableStyle($tableStyle = null)
+  private static function getTableStyle($tableStyle = null, $useBorderTop=true, $useBorderLeft=true)
     {
         if ($tableStyle == null) {
             return '';
@@ -146,7 +148,7 @@ class Table extends AbstractElement
             return $style . '"';
         }
 
-        $style = self::getTableStyleString($tableStyle);
+        $style = self::getTableStyleString($tableStyle, $useBorderTop, $useBorderLeft);
         if ($style === '') {
             return '';
         }
@@ -158,9 +160,11 @@ class Table extends AbstractElement
      * Translates Table style in CSS equivalent
      *
      * @param string|\PhpOffice\PhpWord\Style\Table|\PhpOffice\PhpWord\Style\Cell $tableStyle
+     * @param bool $useBorderTop
+     * @param bool $useBorderTop
      * @return string
      */
-    public static function getTableStyleString($tableStyle)
+    public static function getTableStyleString($tableStyle, $useBorderTop=true, $useBorderLeft=true)
     {
         $style = '';
         if (method_exists($tableStyle, 'getLayout')) {
@@ -193,7 +197,9 @@ class Table extends AbstractElement
             }
         }
 
-        $dirs = array('Top', 'Left', 'Bottom', 'Right');
+        $dirs = array('Bottom', 'Right');
+        if ($useBorderTop) $dirs[] = 'Top';
+        if ($useBorderLeft) $dirs[] = 'Left';
         $testmethprefix = 'getBorder';
         foreach ($dirs as $dir) {
             $style .= self::getTableBorderStyleString($tableStyle, $testmethprefix . $dir, $dir);

@@ -158,13 +158,13 @@ class Head extends AbstractPart
                     // TODO: this is a ugly hack
                     $insideBorderInsideHCss = TableStyleWriter::getTableBorderStyleString($style, 'getBorderInsideH', 'bottom');
                     if ($insideBorderInsideHCss !== '') {
-                      $css .= ".{$name} > tbody > .firstRow > td {" . $insideBorderInsideHCss . '}' . PHP_EOL;
-                      $css .= ".{$name} > tbody > .row > td {" . $insideBorderInsideHCss . '}' . PHP_EOL;
+                        $css .= ".{$name} > tbody > .firstRow > td {" . $insideBorderInsideHCss . '}' . PHP_EOL;
+                        $css .= ".{$name} > tbody > .row > td {" . $insideBorderInsideHCss . '}' . PHP_EOL;
                     }
                     $insideBorderInsideVCss = TableStyleWriter::getTableBorderStyleString($style, 'getBorderInsideV', 'right');
                     if ($insideBorderInsideVCss !== '') {
-                      $css .= ".{$name} > tbody > tr > .firstCol {" . $insideBorderInsideVCss . '}' . PHP_EOL;
-                      $css .= ".{$name} > tbody > tr > .col {" . $insideBorderInsideVCss . '}' . PHP_EOL;
+                        $css .= ".{$name} > tbody > tr > .firstCol {" . $insideBorderInsideVCss . '}' . PHP_EOL;
+                        $css .= ".{$name} > tbody > tr > .col {" . $insideBorderInsideVCss . '}' . PHP_EOL;
                     }
 
                     $condStyles = $style->getConditionalStyles();
